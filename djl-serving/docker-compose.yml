@@ -1,0 +1,22 @@
+services:
+   web-service:
+     depends_on:
+       - model-service
+     # use a tag if caching problems on azure occur with the latest tag  
+     image: mosazhaw/djl-serving-consumer:latest
+     ports:
+       - "80:8082"
+     restart: always
+
+   model-service:
+     # use a tag if caching problems on azure occur with the latest tag  
+     image: mosazhaw/djl-serving:latest
+     restart: always
+     environment:
+      - SERVING_RESERVED_MEMORY_MB=64
+      - SERVING_REQUIRED_MEMORY_MB=64
+      - SERVING_MIN_WORKERS=1
+      - SERVING_MAX_WORKERS=1
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - JAVA_OPTS=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=96m
