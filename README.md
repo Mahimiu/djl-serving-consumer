@@ -8,7 +8,28 @@ Das Projekt entstand im Rahmen des Moduls **MDM (Model Deployment & Maintenance)
 
 **Azure App Service**: [https://djl-consumer-galmmax1-gaf2h9cnhxfrdsb4.switzerlandnorth-01.azurewebsites.net](https://djl-consumer-galmmax1-gaf2h9cnhxfrdsb4.switzerlandnorth-01.azurewebsites.net)
 
-> Beim ersten Aufruf braucht der Sidecar 30-60 Sekunden, um das Modell zu laden.
+> Beim ersten Aufruf braucht der Sidecar 30–60 Sekunden, um das Modell zu laden.
+
+## 🎁 Bonus-Themen Projekt 2
+
+Dieses Projekt deckt zwei auf Moodle angemeldete Bonus-Themen ab:
+
+| Bonus-Thema | Umsetzung |
+|---|---|
+| **UI / Backend** | Drag-&-Drop-Upload, Top-5-Klassifikation mit Confidence-Balken, REST-Endpoints (`/ping`, `/analyze`), Sidecar-Pattern mit Spring WebFlux WebClient |
+| **Dependency Management & Project Setup in VS Code** | Multi-Stage Dockerfile (-39% Image-Grösse, 792 MB → 486 MB), VS Code Workspace Config (`launch.json`, `tasks.json`, `settings.json`, `extensions.json`), `.editorconfig` |
+
+### Multi-Stage Dockerfile
+
+- **Stage 1 (Builder)**: JDK + Maven, baut die JAR
+- **Stage 2 (Runtime)**: nur JRE, Non-Root User (`spring`), container-aware JVM-Settings (`-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0`)
+- **Layer-Caching**: Dependencies werden separat geladen und gecached → schnellere Rebuilds bei reinen Code-Änderungen
+- **OCI-Labels** für Image-Metadaten
+- **Line-Ending-Fix** für `mvnw` (sed im Builder)
+
+### VS Code Workspace
+
+Beim Öffnen des Repos in VS Code werden automatisch passende Extensions vorgeschlagen (Java Pack, Spring Boot Dev Pack, Docker, EditorConfig). Über `F5` startet die App mit Dev-Profil und Debugger, über `Ctrl+Shift+B` läuft `mvn clean package`. Die Settings sorgen für konsistente Java-Formatierung — ergänzt durch `.editorconfig`, das plattform- und IDE-übergreifend wirkt.
 
 ## ✨ Features
 
@@ -16,24 +37,22 @@ Das Projekt entstand im Rahmen des Moduls **MDM (Model Deployment & Maintenance)
 - 📊 **Top-5-Klassifikation** mit Wahrscheinlichkeiten
 - 🔌 **REST-API** mit zwei Endpoints (Ping, Analyze)
 - 🧱 **Sidecar-Architektur**: Web-Service ↔ Model-Service (DJL Serving)
-- 🐳 **Zwei Docker-Images** auf Docker Hub (Consumer + Serving)
+- 🐳 **Multi-Stage Docker-Images** auf Docker Hub (Consumer + Serving) — Bonus
+- 💻 **VS Code Workspace Setup** mit Run/Debug/Tasks — Bonus
 - ☁️ **Azure App Service Deployment** mit Sidecar-Setup
 - 🤖 **CI/CD via GitHub Actions** (automatischer Build & Push beider Images)
 - 🧪 **Postman-Collection** für API-Tests
 
 ## 🏗️ Architektur
-
-```
-┌────────────────┐  HTTP  ┌──────────────────────────┐  HTTP  ┌──────────────────────┐
-│  Browser /     │ ─────► │  Consumer Service        │ ─────► │  Model Service       │
-│  Postman       │ ◄───── │  (Spring Boot, Port 80)  │ ◄───── │  (DJL Serving, 8080) │
-└────────────────┘        │                          │        │                      │
-                          │  /ping                   │        │  /predictions/       │
-                          │  /analyze (image upload) │        │  traced_resnet18     │
-                          └──────────────────────────┘        └──────────────────────┘
-                            galmmax1/                            galmmax1/
-                            djl-serving-consumer:latest          djl-serving:latest
-```
++---------------+  HTTP  +--------------------------+  HTTP  +----------------------+
+|  Browser /    | -----> |  Consumer Service        | -----> |  Model Service       |
+|  Postman      | <----- |  (Spring Boot, Port 80)  | <----- |  (DJL Serving, 8080) |
++---------------+        |                          |        |                      |
+|  /ping                   |        |  /predictions/       |
+|  /analyze (image upload) |        |  traced_resnet18     |
++--------------------------+        +----------------------+
+galmmax1/                            galmmax1/
+djl-serving-consumer:latest          djl-serving:latest
 
 Der Consumer-Service nimmt das Bild entgegen, leitet es an den Sidecar (DJL Serving) weiter und reicht das Resultat unverändert an den Client zurück.
 
@@ -45,8 +64,9 @@ Der Consumer-Service nimmt das Bild entgegen, leitet es an den Sidecar (DJL Serv
 | Framework | Spring Boot 3 + Spring WebFlux (WebClient) |
 | Modell-Server | DJL Serving (im Sidecar) |
 | Modell | TorchScript ResNet18 (`traced_resnet18.zip`, ImageNet-1k) |
-| Build | Maven |
-| Containerisierung | Docker + Docker Compose |
+| Build | Maven (mit Wrapper) |
+| Containerisierung | Docker (Multi-Stage) + Docker Compose |
+| Dev-Setup | VS Code Workspace + `.editorconfig` |
 | CI/CD | GitHub Actions (in **beiden** Repos) |
 | Hosting | Azure App Service mit Sidecar |
 | Verwandtes Repo | [Mahimiu/djl-serving](https://github.com/Mahimiu/djl-serving) (Sidecar-Image) |
@@ -89,6 +109,8 @@ Auf Windows:
 ```cmd
 mvnw.cmd spring-boot:run
 ```
+
+In VS Code: einfach `F5` drücken — die Run-Konfiguration ist im Workspace vorbereitet.
 
 Der Consumer erwartet, dass DJL Serving auf `http://localhost:8080/predictions/traced_resnet18` erreichbar ist (also den Sidecar separat starten).
 
@@ -175,25 +197,28 @@ Status:
 - [Sidecar Actions](https://github.com/Mahimiu/djl-serving/actions)
 
 ## 📁 Projektstruktur
-
-```
 djl-serving-consumer/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml                          # GitHub Actions Workflow
+├── .vscode/                                    # Workspace-Konfig (Bonus)
+│   ├── launch.json                             # Run/Debug-Konfigurationen
+│   ├── tasks.json                              # Maven + Docker Tasks
+│   ├── settings.json                           # Java-Format, Editor
+│   └── extensions.json                         # Empfohlene Extensions
 ├── src/
 │   └── main/
 │       ├── java/ch/zhaw/djl/consumer/consumer/
-│       │   ├── ConsumerApplication.java         # Spring Boot Entry-Point
-│       │   └── ConsumerController.java          # REST-Endpoints + WebClient
+│       │   ├── ConsumerApplication.java        # Spring Boot Entry-Point
+│       │   └── ConsumerController.java         # REST-Endpoints + WebClient
 │       └── resources/
 │           └── application.properties
-├── consumer-collection.json                     # Postman-Collection
-├── Dockerfile
-├── kitten.jpg                                   # Beispielbild für Tests
+├── .editorconfig                               # IDE-übergreifende Format-Regeln (Bonus)
+├── consumer-collection.json                    # Postman-Collection
+├── Dockerfile                                  # Multi-Stage Build (Bonus)
+├── kitten.jpg                                  # Beispielbild für Tests
 ├── pom.xml
-└── README.md                                    # Diese Datei
-```
+└── README.md                                   # Diese Datei
 
 ## 🔗 Verwandte Repositories
 
