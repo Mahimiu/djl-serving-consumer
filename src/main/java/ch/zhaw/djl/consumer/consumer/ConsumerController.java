@@ -1,7 +1,6 @@
 package ch.zhaw.djl.consumer.consumer;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.InputStream;
 
 import org.springframework.core.io.InputStreamResource;
@@ -29,9 +28,6 @@ public class ConsumerController {
         InputStream is = new ByteArrayInputStream(image.getBytes());
 
         var uri = "http://localhost:8080/predictions/traced_resnet18";
-        if (this.isDockerized()) {
-            uri = "http://model-service:8080/predictions/traced_resnet18";
-        }
 
         var webClient = WebClient.create();
         Resource resource = new InputStreamResource(is);
@@ -45,11 +41,6 @@ public class ConsumerController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(result);
-    }
-
-    private boolean isDockerized() {
-        File f = new File("/.dockerenv");
-        return f.exists();
     }
 
 }

@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run ConsumerApplication",
+      "request": "launch",
+      "mainClass": "ch.zhaw.djl.consumer.consumer.ConsumerApplication",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "dev"
+      }
+    },
+    {
+      "type": "java",
+      "name": "Debug ConsumerApplication",
+      "request": "launch",
+      "mainClass": "ch.zhaw.djl.consumer.consumer.ConsumerApplication",
+      "vmArgs": "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "dev",
+        "LOGGING_LEVEL_ROOT": "DEBUG"
+      }
+    }
+  ]
+}
