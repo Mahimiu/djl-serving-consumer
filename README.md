@@ -16,8 +16,16 @@ Dieses Projekt deckt zwei auf Moodle angemeldete Bonus-Themen ab:
 
 | Bonus-Thema | Umsetzung |
 |---|---|
-| **UI / Backend** | Drag-&-Drop-Upload, Top-5-Klassifikation mit Confidence-Balken, REST-Endpoints (`/ping`, `/analyze`), Sidecar-Pattern mit Spring WebFlux WebClient |
+| **UI / Backend** | Animierter Gradient-Hintergrund, Drag-&-Drop-Upload, Top-5-Klassifikation mit Confidence-Balken, 4 REST-Endpoints (`/ping`, `/health`, `/info`, `/analyze`), Swagger UI für interaktive API-Dokumentation, Sidecar-Pattern mit Spring WebFlux WebClient |
 | **Dependency Management & Project Setup in VS Code** | Multi-Stage Dockerfile (-39% Image-Grösse, 792 MB → 486 MB), VS Code Workspace Config (`launch.json`, `tasks.json`, `settings.json`, `extensions.json`), `.editorconfig` |
+
+### UI / Backend Highlights
+
+- **`/health`** — Statusabfrage mit Timestamp und konfigurierter Modell-Service-URL
+- **`/info`** — Modell-Metadaten (Architektur, Framework, Klassen-Anzahl, Sidecar-Endpoint)
+- **Swagger UI** unter `/swagger-ui.html` — interaktive API-Doku mit Try-It-Out-Funktion (springdoc-openapi)
+- **Animierter Gradient-Hintergrund** (CSS `@keyframes`-Animation, 5 Farben, 15s Loop)
+- **Drag-&-Drop-Upload** mit Bootstrap-basierter Card-UI
 
 ### Multi-Stage Dockerfile
 
@@ -33,9 +41,11 @@ Beim Öffnen des Repos in VS Code werden automatisch passende Extensions vorgesc
 
 ## ✨ Features
 
+- 🎨 **Animierter Gradient-Hintergrund** für ein modernes Look-&-Feel
 - 🖼️ **Drag-&-Drop-Upload** für Bilder direkt im Browser
 - 📊 **Top-5-Klassifikation** mit Wahrscheinlichkeiten
-- 🔌 **REST-API** mit zwei Endpoints (Ping, Analyze)
+- 🔌 **REST-API** mit vier Endpoints (Ping, Health, Info, Analyze)
+- 📖 **Swagger UI** für interaktive API-Dokumentation
 - 🧱 **Sidecar-Architektur**: Web-Service ↔ Model-Service (DJL Serving)
 - 🐳 **Multi-Stage Docker-Images** auf Docker Hub (Consumer + Serving) — Bonus
 - 💻 **VS Code Workspace Setup** mit Run/Debug/Tasks — Bonus
@@ -49,7 +59,10 @@ Beim Öffnen des Repos in VS Code werden automatisch passende Extensions vorgesc
 |  Postman      | <----- |  (Spring Boot, Port 80)  | <----- |  (DJL Serving, 8080) |
 +---------------+        |                          |        |                      |
 |  /ping                   |        |  /predictions/       |
-|  /analyze (image upload) |        |  traced_resnet18     |
+|  /health                 |        |  traced_resnet18     |
+|  /info                   |        |                      |
+|  /analyze (image upload) |        |                      |
+|  /swagger-ui.html        |        |                      |
 +--------------------------+        +----------------------+
 galmmax1/                            galmmax1/
 djl-serving-consumer:latest          djl-serving:latest
@@ -62,9 +75,11 @@ Der Consumer-Service nimmt das Bild entgegen, leitet es an den Sidecar (DJL Serv
 |---|---|
 | Sprache | Java 25 |
 | Framework | Spring Boot 3 + Spring WebFlux (WebClient) |
+| API-Doku | springdoc-openapi (Swagger UI) |
 | Modell-Server | DJL Serving (im Sidecar) |
 | Modell | TorchScript ResNet18 (`traced_resnet18.zip`, ImageNet-1k) |
 | Build | Maven (mit Wrapper) |
+| Frontend | HTML, CSS (animierter Gradient), Bootstrap 4 |
 | Containerisierung | Docker (Multi-Stage) + Docker Compose |
 | Dev-Setup | VS Code Workspace + `.editorconfig` |
 | CI/CD | GitHub Actions (in **beiden** Repos) |
@@ -123,9 +138,38 @@ docker run -p 8082:8082 djl-serving-consumer
 
 ## 🔌 API-Endpoints
 
+Alle Endpoints sind unter `http://localhost:8082` (lokal, Spring) oder `http://localhost` (Docker Compose) bzw. der Azure-URL erreichbar.
+
 ### `GET /ping`
 
-Health-Check. Antwort: `"DJL Consumer app is up and running!"`
+Health-Ping. Antwort: `"DJL Consumer app is up and running!"`
+
+### `GET /health`
+
+Detaillierter Status:
+
+```json
+{
+  "status": "UP",
+  "timestamp": "2026-05-17T13:53:31.133",
+  "modelService": "http://localhost:8080/predictions/traced_resnet18"
+}
+```
+
+### `GET /info`
+
+Service-Metadaten:
+
+```json
+{
+  "modelName": "traced_resnet18",
+  "framework": "DJL Serving with TorchScript",
+  "architecture": "ResNet18 (ImageNet-1k)",
+  "modelService": "http://localhost:8080/predictions/traced_resnet18",
+  "numClasses": 1000,
+  "pattern": "Sidecar Architecture"
+}
+```
 
 ### `POST /analyze`
 
@@ -145,9 +189,13 @@ Beispiel-Antwort (mit `kitten.jpg`):
 
 Die Klassen-Bezeichnungen entsprechen den ImageNet-1k-Synsets.
 
+### Swagger UI
+
+Interaktive API-Dokumentation: [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
+
 ## 🧪 API-Tests mit Postman
 
-Die Datei [`consumer-collection.json`](consumer-collection.json) enthält eine Postman-Collection mit beiden Endpoints.
+Die Datei [`consumer-collection.json`](consumer-collection.json) enthält eine Postman-Collection mit den Endpoints.
 
 ### Import
 
@@ -159,7 +207,7 @@ Die Datei [`consumer-collection.json`](consumer-collection.json) enthält eine P
 
 ### Tests durchführen
 
-`GET /ping` direkt mit **Send**. Für `POST /analyze`: Tab **Body → form-data**, beim Feld `image` ein Bild auswählen (z.B. `kitten.jpg` aus dem Repo).
+`GET /ping`, `/health`, `/info` direkt mit **Send**. Für `POST /analyze`: Tab **Body → form-data**, beim Feld `image` ein Bild auswählen (z.B. `kitten.jpg` aus dem Repo).
 
 ## 🚢 Deployment
 
@@ -170,11 +218,7 @@ Die Live-Version nutzt das Azure-Sidecar-Pattern:
 - **Sidecar**: `galmmax1/djl-serving:latest` (Port 8080, intern)
 - **Region**: Switzerland North
 
-Konfiguration in den Azure-App-Settings:
-- Sidecar wird über die "Deployment Center"-Sidecar-Konfiguration verlinkt.
-- Beide Container laufen im selben Network und sind sich gegenseitig per Service-Name erreichbar.
-
-Code-seitig schaltet der `ConsumerController` automatisch zwischen lokalem (`localhost:8080`) und Container-Modus (`model-service:8080`) um, abhängig davon, ob die Datei `/.dockerenv` existiert.
+Beide Container laufen im selben Network und sind sich gegenseitig per `localhost` erreichbar.
 
 ### Docker Hub
 
@@ -212,12 +256,16 @@ djl-serving-consumer/
 │       │   ├── ConsumerApplication.java        # Spring Boot Entry-Point
 │       │   └── ConsumerController.java         # REST-Endpoints + WebClient
 │       └── resources/
-│           └── application.properties
+│           ├── application.properties
+│           └── static/
+│               ├── index.html                  # Frontend (Bonus: Branding)
+│               ├── script.js
+│               └── style.css                   # Frontend (Bonus: animierter Hintergrund)
 ├── .editorconfig                               # IDE-übergreifende Format-Regeln (Bonus)
 ├── consumer-collection.json                    # Postman-Collection
 ├── Dockerfile                                  # Multi-Stage Build (Bonus)
 ├── kitten.jpg                                  # Beispielbild für Tests
-├── pom.xml
+├── pom.xml                                     # springdoc-openapi für Swagger UI (Bonus)
 └── README.md                                   # Diese Datei
 
 ## 🔗 Verwandte Repositories
